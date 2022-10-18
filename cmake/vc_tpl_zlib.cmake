@@ -35,8 +35,8 @@ if(VOROCRUST_TPL_BUILD_ZLIB)
         # URL https://zlib.net/zlib-1.2.11.tar.gz
         # URL_MD5 1c9f62f0778697a09d36121ead88e08e
 
-        URL https://zlib.net/zlib1212.zip
-        URL_MD5 e488ca65af6d6299b61acf52838a0c94 # 16b41357b2cd81bca5e1947238e64465
+        URL https://zlib.net/zlib1213.zip# https://zlib.net/zlib1212.zip
+        URL_MD5 9cb22b7d2aa208b61f5850c04bebda58 # e488ca65af6d6299b61acf52838a0c94 # 16b41357b2cd81bca5e1947238e64465
 
         PREFIX  ${TPL_BUILD_ROOT_DIR}/zlib
 
