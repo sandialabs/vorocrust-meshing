@@ -4,7 +4,7 @@ VoroCrust-Meshing is the first provably correct algorithm for conforming Voronoi
 of non-convex and non-manifold domains with guarantees on the quality of both
 surface and volume elements.
 
-SRC Number
+SCR Number
 ----------------------
 VoroCrust-Meshing is SCR 2820.0. It was approved for open source release 8/30/2022.
 
