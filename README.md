@@ -133,7 +133,7 @@ There are quite a number of CMake options for VoroCrust-Meshing that can be used
 the build. Here is a list of them:
 
 | CMake Option                         | Default Value | Advanced | Description                                                                  |
-|--------------------------------------|:-------------:|:--------:|------------------------------------------------------------------------------|                                          |
+|--------------------------------------|:-------------:|:--------:|------------------------------------------------------------------------------|
 | `VOROCRUST_BUILD_MESH`               |      ON       |    NO    | Include `src/Mesh` codes                                                     |
 | `VOROCRUST_ENABLE_EXODUS`            |      OFF      |    NO    | Build EXODUS mesh output capability (for Mesh)                               |
 | `VOROCRUST_ENABLE_LONG_TESTS`        |      OFF      |    NO    | Enables some longer-running tests.                                           |
