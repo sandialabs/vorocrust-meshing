@@ -1,0 +1,489 @@
+#!/usr/bin/env groovy
+//
+// This Jenkinsfile is the main pipeline driver script for VoroCrust on our
+// Jenkins server.
+//
+//
+
+// Load the SPiFI library
+def libspifi = library("SPiFI-2.0.0").gov.sandia.sems.spifi
+
+
+// Defaults
+Boolean default_dryrun = false
+String  default_mailto = "wg-vorocrust-devs@mailgate.sandia.gov"
+String  default_git_credential = "0aacc0f3-7e90-4b0f-9eda-068f1d6ce052"
+
+
+// Configure Job Properties
+properties([
+    buildDiscarder(
+        logRotator(daysToKeepStr: '365', numToKeepStr: '32', artifactDaysToKeepStr: '', artifactNumToKeepStr: '')
+    ),
+    disableConcurrentBuilds(),
+    parameters([ booleanParam(name: 'PARAM_DRY_RUN',
+                              defaultValue: default_dryrun,
+                              description: '''dry-run mode: echo commands but don't run anything'''),
+                 booleanParam(name: 'PARAM_CLEAN_WORKSPACE',
+                              defaultValue: false,
+                              description: '''Optionally clean the workspace before entering the pipeline.'''),
+                 stringParam(name: 'PARAM_EMAIL_REPLYTO',
+                             defaultValue: default_mailto,
+                             description: '''Reply-To email address for generated status messages.'''),
+                 stringParam(name: 'PARAM_EMAIL_DEVOPS',
+                             defaultValue: default_mailto,
+                             description: '''Recipient list for the email report. Separate multiple email addresses using spaces.'''),
+                 credentials(name: "PARAM_GIT_CREDENTIAL",
+                             credentialType: 'com.cloudbees.plugins.credentials.common.StandardCredentials',
+                             defaultValue: default_git_credential,
+                             description: 'The Git credential to use for checking out the repository',
+                             required: true)
+               ])
+])
+
+
+Boolean param_dry_run         = libspifi.JenkinsTools.spifi_checked_get_parameter(env: this,
+                                                                                  params: params,
+                                                                                  key: "PARAM_DRY_RUN",
+                                                                                  default: false,
+                                                                                  required: true)
+
+Boolean param_clean_workspace = libspifi.JenkinsTools.spifi_checked_get_parameter(env: this,
+                                                                                  params: params,
+                                                                                  key: "PARAM_CLEAN_WORKSPACE",
+                                                                                  default: false,
+                                                                                  required: true)
+
+String param_email_replyto   = libspifi.JenkinsTools.spifi_checked_get_parameter(env: this,
+                                                                                 params: params,
+                                                                                 key: "PARAM_EMAIL_REPLYTO",
+                                                                                 default: default_mailto)
+
+String param_email_devops    = libspifi.JenkinsTools.spifi_checked_get_parameter(env: this,
+                                                                                 params: params,
+                                                                                 key: "PARAM_EMAIL_DEVOPS",
+                                                                                 default: default_mailto)
+
+String param_git_credential  = libspifi.JenkinsTools.spifi_checked_get_parameter(env: this,
+                                                                                 params: params,
+                                                                                 key: "PARAM_GIT_CREDENTIAL",
+                                                                                 default: default_git_credential)
+
+// Console debugging
+println "PARAMETERS\n" +
+        "==========\n" +
+        "param_dry_run         = ${param_dry_run}\n" +
+        "param_clean_workspace = ${param_clean_workspace}\n" +
+        "param_email_replyto   = ${param_email_replyto}\n" +
+        "param_email_devops    = ${param_email_devops}\n" +
+        "param_git_credential  = ${param_git_credential}\n"
+
+// Create other variables that we wish to keep around to pass information across stages.
+String email_body = "<H1>Summary</H1>\n"
+
+
+node("master || RHEL6 || RHEL7 || OS_RHEL6 || OS_RHEL7")
+{
+    // Set this to TRUE to halt the pipeline after a stage.
+    String pipeline_status = "SUCCESS"
+
+    // Clean the workspace if requested.
+    // - Does not need to be in a stage() { ... } but should be
+    //   inside the node() { ... } block you wish to clean.
+    if(param_clean_workspace)
+    {
+        cleanWs()
+    }
+
+
+
+    // Do some work
+    stage("Tests: Production")
+    {
+        // Instantiate a JobLauncher
+        def spifi_jl = libspifi.JobLauncher.new(env: this)
+
+        // Add some jobs to run
+        spifi_jl.appendJob(label: "Job-01",
+                           job_name: "VoroCrust_test_rhel6_kitchen_sink",
+                           dry_run: param_dry_run,
+                           dry_run_delay: 5)
+
+        spifi_jl.appendJob(label: "Job-02",
+                           job_name: "VoroCrust_test_rhel6_kokkos",
+                           dry_run: param_dry_run,
+                           dry_run_delay: 5)
+
+        spifi_jl.appendJob(label: "Job-03",
+                           job_name: "VoroCrust_test_rhel6_long",
+                           dry_run: param_dry_run,
+                           dry_run_delay: 5)
+
+        spifi_jl.appendJob(label: "Job-04",
+                           job_name: "VoroCrust_test_rhel6_mpi",
+                           dry_run: param_dry_run,
+                           dry_run_delay: 5)
+
+        // Pretty Print the list of jobs to console output
+        spifi_jl.printJobList()
+
+        // Launch the jobs and save the results
+        def results = spifi_jl.launchInParallel()
+
+        // Get the summary stats of the run
+        def summary = spifi_jl.getLastResultSummary()
+
+        // Console debugging
+        if(param_dry_run)
+        {
+            println "RESULTS (Dry Run)\n" +
+                    "=================\n" +
+                    "${results}\n\n" +
+                    "SUMMARY\n" +
+                    "=======\n" +
+                    "${summary}\n"
+        }
+
+
+        // Create a SPiFI ResultsUtility handler
+        def spifi_ru = libspifi.ResultsUtility.new(env: this)
+
+        // Print out the summary table to the Jenkins console (i.e., NUMJOBS, NUMSUCCESS, NUMFAILURE, etc.)
+        println spifi_ru.genResultSummaryTable(format: "ASCII", summary: summary)
+
+        // Print out the details table of the job that ran.
+        // This provides the status of the individual jobs, etc.
+        println spifi_ru.genResultDetails(format: "ASCII", results: results)
+
+        // Update the email_body with HTML tables
+        email_body += "<H3>Production Tests</H3>\n"
+        email_body += "<P>These tests generally should all pass.\n"
+        email_body += "</P>\n"
+        email_body += spifi_ru.genResultDetails(format: "HTML", results: results)
+
+        // Set failure conditions if actual results don't match expected results.
+        if(summary.NUMJOBS != summary.NUMSUCCESS)
+        {
+            // Set the Jenkins Pipeline Status.
+            // Must be one of:  [SUCCESS, FAILURE, UNSTABLE, ABORTED, NOT_BUILT]
+            // This also casuses the pipeline to terminate at the end of this stage.
+            currentBuild.result = "FAILURE"
+            pipeline_status = "FAILURE"
+        }
+    }  // end stage 'Tests: Production'
+
+
+
+    stage("Tests: Experimental")
+    {
+        // Instantiate a JobLauncher
+        def spifi_jl = libspifi.JobLauncher.new(env: this)
+
+        // Add jobs
+        spifi_jl.appendJob(label: "Job-01-Exp",
+                           job_name: "VoroCrust_test_rhel6_serial",
+                           dry_run: param_dry_run,
+                           dry_run_delay: 5,
+                           dry_run_status: "FAILURE")
+
+        spifi_jl.appendJob(label: "Job-02-Exp",
+                           job_name: "VoroCrust_test_rhel7_exodus",
+                           dry_run: param_dry_run,
+                           dry_run_delay: 5,
+                           dry_run_status: "SUCCESS")
+
+        spifi_jl.appendJob(label: "Job-03-Exp",
+                           job_name: "VoroCrust_test_OSX_10.15_exodus",
+                           dry_run: param_dry_run,
+                           dry_run_delay: 5,
+                           dry_run_status: "SUCCESS")
+
+        // Pretty Print the list of jobs to console output
+        spifi_jl.printJobList()
+
+        // Launch the jobs and save the results
+        def results = spifi_jl.launchInParallel()
+
+        // Get the summary stats of the run
+        def summary = spifi_jl.getLastResultSummary()
+
+        // Console debugging
+        if(param_dry_run)
+        {
+            println "RESULTS (Dry Run)\n" +
+                    "=================\n" +
+                    "${results}\n\n" +
+                    "SUMMARY\n" +
+                    "=======\n" +
+                    "${summary}\n"
+        }
+
+
+        // Create a SPiFI ResultsUtility handler
+        def spifi_ru = libspifi.ResultsUtility.new(env: this)
+
+        // Print out the summary table to the Jenkins console (i.e., NUMJOBS, NUMSUCCESS, NUMFAILURE, etc.)
+        println spifi_ru.genResultSummaryTable(format: "ASCII", summary: summary)
+
+        // Print out the details table of the job that ran.
+        // This provides the status of the individual jobs, etc.
+        println spifi_ru.genResultDetails(format: "ASCII", results: results)
+
+        // Update the email_body with HTML tables
+        email_body += "<H3>Experimental Jobs</H3>\n"
+        email_body += "<P>These jobs are <I>experimental</i> and are not expected to always pass\n"
+        email_body += "</P>\n"
+        email_body += spifi_ru.genResultDetails(format: "HTML", results: results)
+    }   // end stage 'Tests: Experimental'
+
+
+
+    // Determine changes from last time we ran the pipeline
+    stage("Determine Changes")
+    {
+        try
+        {
+            String vorocrust_git_url = "git@cee-gitlab.sandia.gov:vorocrust/vorocrust.git"
+            String vorocrust_git_dir = "VoroCrust"
+            String vorocrust_changed_files = ""
+
+            def spifi_git = libspifi.Git.new()
+
+            Boolean clone_ok = spifi_git.clone(env: this,
+                                               dir: vorocrust_git_dir,
+                                               url: vorocrust_git_url,
+                                               credentialsId: param_git_credential,
+                                               branch: "master",
+                                               retries: 3,
+                                               retry_delay: 10,
+                                               shallow: true,
+                                               timeout: 5,
+                                               timeout_units: "MINUTES",
+                                               verbose: true)
+
+            dir(vorocrust_git_dir)
+            {
+                vorocrust_changed_files = git_changed_files("vorocrust")
+            }
+
+            email_body += "<H3>Changed Files</H3>\n"
+            if("" != vorocrust_changed_files)
+            {
+                email_body += "<details>\n"
+                email_body += "<summary>Click to see changed files:</summary>\n"
+                email_body += "<pre>\n${vorocrust_changed_files}\n</pre>\n"
+                email_body += "</details>\n\n"
+            }
+            else
+            {
+                email_body += "No files changed from previous execution\n"
+            }
+        }
+        catch(err)
+        {
+            println("ERROR: Unhandled exception determining changes to repository")
+            email_body += "<H3>ERROR: An error occurred determining changes</H3>\n"
+            currentBuild.result = "FAILURE"
+            pipeline_status = "FAILURE"
+        }
+    }
+
+
+
+    // Email Notification on Success
+    stage("Nofitication")
+    {
+        notify(body: email_body, status: pipeline_status)
+    }  // end stage Notification
+
+}  // end node()
+
+
+
+// ====================================
+//
+// H E L P E R   F U N C T I O N S
+//
+// ====================================
+
+
+// Simple notifier
+// Expected Arguments:
+//    body (string) : The body of the email to be generated and sent.
+//    status (string): Status of the job (SUCCESS, FAILURE, etc.)
+//
+def notify(Map args)
+{
+    // Load SPiFI (defs won't already have libspifi)
+    // (This shouldn't cost anything to load as Jenkins uses the 'first' one of
+    // these it sees and then just caches).
+    def libspifi = library("SPiFI-2.0.0").gov.sandia.sems.spifi
+
+    // Set up email subject and prepend a header to the email based on status.
+    String email_subject = "VoroCrust Testing Results (${args.status})"
+
+    // Prepend a header to the email message including the status
+    args.body = "<H1>Testing Result: ${args.status}</H1>\n" + args.body
+
+    // Create a SPiFI HTMLUtility object to generate the html document for emailing.
+    def spifi_hu = libspifi.HTMLUtility.new(env: this)
+
+    // Send the email using Jenkins' email utility.
+    mail(to:       param_email_devops  /* Global */,
+         replyTo:  param_email_replyto /* Global */,
+         subject:  email_subject       /* Local */,
+         body:     spifi_hu.generate(body: args.body),
+         mimeType: "text/html"
+        )
+}
+
+
+
+/**
+ * git_sha1()
+ * Return the SHA1 of a git repository. This should be called with the working directory
+ * set to inside the local copy of a git repository that has been checked out, which can be
+ * done by calling this function from within a `dir("dirname") { ... }` block.
+ *
+ * @param short Boolean [OPTIONAL] - Return a shortened SHA1 string rather than the full length hash.
+ *                                   Default: false
+ *
+ * @return String containing the SHA1.
+ */
+def git_sha1(Map params)
+{
+    String output_SHA1 = ""
+    String short_arg = ""
+    if(params.containsKey("short_sha") && (params.short_sha instanceof Boolean) && params.short_sha)
+    {
+        short_arg = "--short"
+    }
+    command = "git rev-parse ${short_arg} HEAD"
+
+    output_SHA1 = sh(encoding: "UTF-8",
+                     label: 'git rev parse',
+                     returnStdout: true,
+                     script: command)
+    output_SHA1 = output_SHA1.trim()
+
+    return output_SHA1
+ }
+
+
+/**
+ * copy_artifact_from_previous_build()
+ * Copy artifacts from the previous build and return the contents as a String.
+ * Artifacts are copied into ${WORKSPACE}/tmp.
+ *
+ * @param artifact_name String [REQUIRED] - The name of the artifact to load.
+ *
+ * @return String containing the artifact loaded.
+ *
+ * @todo Remove the copied artifacts after we're done with them.
+ */
+def copy_artifact_from_previous_build(Map params)
+{
+    String previousSHA1 = "UNKNOWN"
+
+    dir("${WORKSPACE}/tmp")
+    {
+        // Check for required parameter(s)
+        if(!params.containsKey('file'))
+        {
+            throw new Exception("Missing required parameter")
+        }
+        if(! params.file instanceof String)
+        {
+            throw new Exception("Type Error: `file` must be a String")
+        }
+
+        if(currentBuild.previousBuild)
+        {
+            try
+            {
+                copyArtifacts(projectName: currentBuild.projectName,
+                              selector: specific("${currentBuild.previousBuild.number}"))
+                previousSHA1 = readFile(file: params.file)
+                previousSHA1 = previousSHA1.trim()
+            }
+            catch(err)
+            {
+                println("WARNING: Unable to determine previous SHA1")
+            }
+        }
+    }
+    return previousSHA1
+ }
+
+
+
+/**
+ * git_changed_files()
+ *
+ * @param label  (String) - A label to apply to the artifacts (useful if there are > 1 to check)
+ *                          Default: ""
+ *
+ * @return String containing the list of changed files.
+ */
+def git_changed_files(String label="")
+{
+    String changed_files = ""
+    String currentSHA1   = "UNKNOWN"
+    String previousSHA1  = "UNKNOWN"
+
+    // Clean up the label parameter
+    label = label.trim()
+    if(label != "")
+    {
+        label += "_"
+    }
+
+    String sha1_artifact_filename = "__${label}sha1.txt"
+    String changed_artifact_filename = "__${label}changed.txt"
+
+    // Get the current SHA1
+    currentSHA1 = git_sha1(short_sha: true)
+
+    writeFile(file: "${WORKSPACE}/${sha1_artifact_filename}",
+              text: currentSHA1)
+
+    // Get the SHA1 from the artifact in a previous build
+    previousSHA1 = copy_artifact_from_previous_build(file: sha1_artifact_filename)
+
+    if("UNKNOWN" != previousSHA1 && "UNKNOWN" != currentSHA1)
+    {
+        println ">>> OK to determine changed files"
+
+        try
+        {
+            changed_files = sh(encoding: 'UTF-8',
+                               returnStdout: true,
+                               script: "git diff --name-only ${previousSHA1} ${currentSHA1}")
+        }
+        catch(err)
+        {
+            println(">>> Warning: Something went wrong in git diff")
+        }
+
+        println ">>> Changed Files:\n${changed_files}"
+
+        writeFile(file: "${WORKSPACE}/${changed_artifact_filename}",
+                  text: changed_files)
+    }
+
+    println "=================================\n" +
+            "previousSHA1: ${previousSHA1}\n"     +
+            "currentSHA1 : ${currentSHA1}\n"      +
+            "changedFiles:\n${changed_files}\n"   +
+            "================================="
+
+    // Archive artifacts
+    dir("${WORKSPACE}")
+    {
+        archiveArtifacts(artifacts: sha1_artifact_filename, allowEmptyArchive: true)
+        archiveArtifacts(artifacts: changed_artifact_filename, allowEmptyArchive: true)
+    }
+
+    return changed_files
+}
+
