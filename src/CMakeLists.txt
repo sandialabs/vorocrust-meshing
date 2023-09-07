@@ -13,15 +13,8 @@ else()
     vc_message("Skip version configuration via Git SHA1")
 endif()
 
-# Add Subdirectories
-# add_subdirectory(Common)
-add_subdirectory(Meshing) # JHS 08/16/2022 Since everything is in Meshing, swap Common for Meshing
-#add_subdirectory(Common)
-#add_optional_subdirectory_if_exists("${CMAKE_CURRENT_SOURCE_DIR}/Meshing")
-#add_optional_subdirectory_if_exists("${CMAKE_CURRENT_SOURCE_DIR}/Common") # JHS Also swap Meshing for Common here since DataCompression and Experimental still need VoroSpokes.*
-#add_optional_subdirectory_if_exists("${CMAKE_CURRENT_SOURCE_DIR}/DataCompression")
-#add_optional_subdirectory_if_exists("${CMAKE_CURRENT_SOURCE_DIR}/Experimental")
-#add_optional_subdirectory_if_exists("${CMAKE_CURRENT_SOURCE_DIR}/AI")
+# Add Subdirectory
+add_subdirectory(Meshing) 
 
 vc_print_banner("COMPLETE: ${CMAKE_CURRENT_LIST_FILE}")
 

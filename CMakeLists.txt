@@ -152,24 +152,6 @@ if(VOROCRUST_ENABLE_TUCKERMPI AND (NOT VOROCRUST_TPL_USE_LAPACK))
 endif()
 
 
-# Force VoroCrust to build dependencies if Experimental is enabled.
-if(VOROCRUST_BUILD_EXPERIMENTAL AND (NOT VOROCRUST_BUILD_AI))
-    vc_message("${Yellow}WARNING${ColorReset}: VOROCRUST_BUILD_EXPERIMENTAL requires VOROCRUST_BUILD_AI")
-    vc_message("-- ${Red}Setting${ColorReset} ${Magenta}VOROCRUST_BUILD_AI=ON${ColorReset}")
-    set(VOROCRUST_BUILD_AI ON CACHE BOOL "Enabled due to dependency requirement" FORCE)
-endif()
-if(VOROCRUST_BUILD_EXPERIMENTAL AND (NOT VOROCRUST_BUILD_DATACOMPRESSION))
-    vc_message("${Yellow}WARNING${ColorReset}: VOROCRUST_BUILD_EXPERIMENTAL requires VOROCRUST_BUILD_DATACOMPRESSION")
-    vc_message("-- ${Red}Setting${ColorReset} ${Magenta}VOROCRUST_BUILD_DATACOMPRESSION=ON${ColorReset}")
-    set(VOROCRUST_BUILD_DATACOMPRESSION ON CACHE BOOL "Enabled due to dependency requirement" FORCE)
-endif()
-if(VOROCRUST_BUILD_EXPERIMENTAL AND (NOT VOROCRUST_BUILD_MESH))
-    vc_message("${Yellow}WARNING${ColorReset}: VOROCRUST_BUILD_EXPERIMENTAL requires VOROCRUST_BUILD_MESH")
-    vc_message("-- ${Red}Setting${ColorReset} ${Magenta}VOROCRUST_BUILD_MESH=ON${ColorReset}")
-    set(VOROCRUST_BUILD_MESH ON CACHE BOOL "Enabled due to dependency requirement" FORCE)
-endif()
-
-
 #========================================
 # Initialize GLOBAL scope vars
 #========================================
