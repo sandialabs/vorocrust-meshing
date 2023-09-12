@@ -167,10 +167,6 @@ public:
 		                    size_t &num_face_corners, double** &face_corners,
 		                    double &face_area, double &face_height);
 
-	int get_2d_Voronoi_cell(size_t iseed, double* xmin, double* xmax, size_t& num_corners, double** &corners, size_t* &neighbors);
-
-	int get_2d_Voronoi_cell(double* x, double* xmin, double* xmax, size_t &num_corners, double** &corners, size_t* &neighbors);
-
 	bool get_Voronoi_vertex(size_t num_seeds, size_t* seeds, double* vertex);
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
