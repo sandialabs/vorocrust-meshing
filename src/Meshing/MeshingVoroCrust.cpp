@@ -642,8 +642,10 @@ int MeshingVoroCrust::generate_explicit_mesh(int num_threads, size_t num_seeds, 
 	if (false)
 	{
 		double* xo = new double[3]; double* edir = new double[3];
-		xo[0] = 0.4; xo[1] = 0.4; xo[2] = 0.4;
-		edir[0] = 1.0; edir[1] = 1.0; edir[2] = 1.0;
+		xo[0] = 0.3; xo[1] = 0.3; xo[2] = 0.3;
+		// 0.2 0.0 0.4
+		// 0.4 0.4 0.0
+		edir[0] = -0.16; edir[1] = 0.16; edir[2] = 0.08;
 		mesher.save_Voronoi_tessellation("mesh.ply", num_vertices, vertices, num_faces, faces, xo, edir);
 		delete[] xo; delete[] edir;
 	}

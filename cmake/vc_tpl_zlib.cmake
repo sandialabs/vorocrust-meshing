@@ -14,8 +14,8 @@ if(VOROCRUST_TPL_BUILD_ZLIB)
     # Copy the TPL zip file over from the TPLs subdir
     # This is useful when the SNL proxy issues come up
     if(VOROCRUST_TPL_NO_DOWNLOAD)
-        configure_file(${CMAKE_SOURCE_DIR}/tpls/zlib13.zip #zlib1212.zip
-                       ${TPL_BUILD_ROOT_DIR}/zlib/src/zlib13.zip
+        configure_file(${CMAKE_SOURCE_DIR}/tpls/zlib131.zip
+                       ${TPL_BUILD_ROOT_DIR}/zlib/src/zlib131.zip
                        COPYONLY)
     endif()
 
@@ -32,13 +32,8 @@ if(VOROCRUST_TPL_BUILD_ZLIB)
     set(TPL_ZLIB_ENABLE_TESTS ${VOROCRUST_ENABLE_TPL_TESTS})
 
     ExternalProject_Add(zlib
-        # URL https://zlib.net/zlib-1.2.11.tar.gz
-        # URL_MD5 1c9f62f0778697a09d36121ead88e08e
-
-        #URL https://zlib.net/zlib1213.zip# https://zlib.net/zlib1212.zip
-        #URL_MD5 9cb22b7d2aa208b61f5850c04bebda58 # e488ca65af6d6299b61acf52838a0c94 # 16b41357b2cd81bca5e1947238e64465
-	URL https://www.zlib.net/zlib13.zip
-	URL_MD5	ff698430d4fcd735631a52a9d5e8a073
+	URL https://www.zlib.net/zlib131.zip
+	URL_MD5	ef76f7ebfd97778a6653b1d8413541c0
 
         PREFIX  ${TPL_BUILD_ROOT_DIR}/zlib
 

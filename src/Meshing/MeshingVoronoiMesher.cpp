@@ -220,8 +220,8 @@ int MeshingVoronoiMesher::ensure_sharp_edge_spheres_are_Delaunay(size_t& num_see
 			{
 				iclosest = SIZE_MAX; hclosest = DBL_MAX;
 				get_closest_tree_point(num_corner_spheres, 3, corner_spheres_sorted,
-					corner_spheres_tree_origin, corner_spheres_tree_right, corner_spheres_tree_left,
-					xo, iclosest, hclosest);
+					                   corner_spheres_tree_origin, corner_spheres_tree_right, corner_spheres_tree_left,
+					                   xo, e_dir, iclosest, hclosest);
 
 				size_t jsphere = corner_spheres_old_index[iclosest];
 				xn[0] = corner_spheres[jsphere * 3];
@@ -348,9 +348,17 @@ int MeshingVoronoiMesher::ensure_sharp_edge_spheres_are_Delaunay(size_t& num_see
 					#pragma endregion
 				}				
 			}
+
 			if (h_best < 1E-10)
 			{
-				vcm_cout << "VoroCrust ERROR!, could not find a proper seed location to ensure Edge Sphere is Delaunay!!" << std::endl;
+				vcm_cout << "VoroCrust Warning!, could not find a proper seed location to ensure Edge Sphere is Delaunay!!" << std::endl;
+				vcm_cout << "Sphere i: " << xo[0] << " " << xo[1] << " " << xo[2] << " " << xo[3] << std::endl;
+				vcm_cout << "Sphere j: " << xn[0] << " " << xn[1] << " " << xn[2] << " " << xn[3] << std::endl;				
+
+				if (e_dir != 0)
+				{
+					vcm_cout << "e_dir: " << e_dir[0] << " " << e_dir[1] << " " << e_dir[2] << std::endl;
+				}				
 				continue;
 			}
 
@@ -2356,7 +2364,7 @@ int MeshingVoronoiMesher::save_Voronoi_tessellation(std::string file_name,
 				double dx = vertices[vtx_index * 3 + idim] - xo[idim];
 				dot += dx * edir[idim];
 			}
-			if (dot < 1E-10)
+			if (dot < -1E-10)
 			{
 				valid_faces[iface] = false;
 				break;
@@ -2709,6 +2717,19 @@ int MeshingVoronoiMesher::get_closest_tree_point(size_t num_points, size_t num_d
 }
 
 int MeshingVoronoiMesher::get_closest_tree_point(size_t num_points, size_t num_dim, double* points, size_t tree_origin, size_t* tree_right, size_t* tree_left,
+	                                             double* x, double* e_dir, size_t& closest_tree_point, double& closest_distance)
+{
+	#pragma region Closest Neighbor Search using kd tree:
+	closest_tree_point = num_points;
+	size_t num_nodes_visited = 0;
+	if (num_points == 0) return 1;
+	kd_tree_get_closest_seed(num_points, num_dim, points, tree_origin, tree_right, tree_left,
+		x, e_dir, 0, tree_origin, closest_tree_point, closest_distance, num_nodes_visited);
+	return 0;
+	#pragma endregion
+}
+
+int MeshingVoronoiMesher::get_closest_tree_point(size_t num_points, size_t num_dim, double* points, size_t tree_origin, size_t* tree_right, size_t* tree_left,
 	                                             size_t tree_point_index, double* e_dir, size_t& closest_tree_point, double& closest_distance)
 {
 	#pragma region Closest Neighbor Search using kd tree:
@@ -2898,6 +2919,49 @@ int MeshingVoronoiMesher::kd_tree_get_closest_seed(size_t num_points, size_t num
 	{
 		kd_tree_get_closest_seed(num_points, num_dim, points, tree_origin, tree_right, tree_left, 
 			                     x, d_index + 1, tree_left[node_index], closest_seed, closest_distance, num_nodes_visited);
+	}
+	return 0;
+	#pragma endregion
+}
+
+int MeshingVoronoiMesher::kd_tree_get_closest_seed(size_t num_points, size_t num_dim, double* points,
+	                                               size_t tree_origin, size_t* tree_right, size_t* tree_left,
+	                                               double* x, double* e_dir, size_t d_index, size_t node_index,
+	                                               size_t& closest_seed, double& closest_distance,
+	                                               size_t& num_nodes_visited)
+{
+	#pragma region kd tree closest neighbor search:
+	if (d_index == num_dim) d_index = 0;
+
+	double dst(0.0), dot(0.0);
+	for (size_t idim = 0; idim < num_dim; idim++)
+	{
+		double dx = points[node_index * num_dim + idim] - x[idim];
+		dst += dx * dx;
+
+		if (e_dir != 0) dot += dx * e_dir[idim];
+	}
+	dst = sqrt(dst);
+	num_nodes_visited++;
+	if (dst < closest_distance && dot >= 0.0)
+	{
+		// update closest seed
+		closest_seed = node_index;
+		closest_distance = dst;
+	}
+
+	double neighbor_max = x[d_index] + closest_distance;
+	if (tree_right[node_index] != node_index && neighbor_max > points[node_index * num_dim + d_index])
+	{
+		kd_tree_get_closest_seed(num_points, num_dim, points, tree_origin, tree_right, tree_left,
+			x, e_dir, d_index + 1, tree_right[node_index], closest_seed, closest_distance, num_nodes_visited);
+	}
+
+	double neighbor_min = x[d_index] - closest_distance;
+	if (tree_left[node_index] != node_index && neighbor_min < points[node_index * num_dim + d_index])
+	{
+		kd_tree_get_closest_seed(num_points, num_dim, points, tree_origin, tree_right, tree_left,
+			x, e_dir, d_index + 1, tree_left[node_index], closest_seed, closest_distance, num_nodes_visited);
 	}
 	return 0;
 	#pragma endregion

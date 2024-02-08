@@ -279,8 +279,8 @@ bool MeshingGeometricalMethods::normalize_vector(size_t num_dim, double* vec)
 	{
 		norm += vec[idim] * vec[idim];
 	}
-	if (norm < 1E-10) return false;
 	norm = sqrt(norm);
+	if (norm < 1E-10) return false;
 	for (size_t idim = 0; idim < num_dim; idim++) vec[idim] /= norm;
 	return true;
 	#pragma endregion
@@ -334,12 +334,12 @@ bool MeshingGeometricalMethods::get_3d_triangle_normal(double** corners, double*
 	normal[1] = a[2] * b[0] - a[0] * b[2];
 	normal[2] = a[0] * b[1] - a[1] * b[0];
 	double norm = normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2];
+	norm = sqrt(norm);
 	if (fabs(norm) < 1E-10)
 	{
 		delete[] a; delete[] b;
 		return false; // a degenerate face due to angle
 	}
-	norm = sqrt(norm);
 	for (size_t idim = 0; idim < 3; idim++) normal[idim] /= norm;
 	delete[] a; delete[] b;
 	return true;

@@ -473,7 +473,7 @@ int MeshingVoroCrustSampler::detect_features_generate_point_clouds_clean(size_t 
 		#pragma endregion
 	}
 
-	size_t num_mc_face_points(100000);
+	size_t num_mc_face_points(500000);
 	if (true)
 	{
 		#pragma region Sampling Surface:

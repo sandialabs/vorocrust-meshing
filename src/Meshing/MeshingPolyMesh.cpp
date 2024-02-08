@@ -252,7 +252,7 @@ int MeshingPolyMesh::read_input_obj_file(std::string filename, size_t &num_point
 				for (size_t i = 1; i <= 3; i++) faces[num_faces][i] = size_t(_memo.string_to_double(tokens[i]) - 1);
 
 				bool redundant(false);
-				if (true)
+				if (false)
 				{
 					// check if redundant facet
 					for (size_t jface = 0; jface < num_faces; jface++)
@@ -283,12 +283,51 @@ int MeshingPolyMesh::read_input_obj_file(std::string filename, size_t &num_point
 		}
 	}
 
+	if (false)
+	{
+		#pragma region Pleace the origin at the lower left corner of the bounding box of the model:
+		double* xmin = new double[3];
+		double* xmax = new double[3];
+
+		for (size_t idim = 0; idim < 3; idim++)
+		{
+			xmin[idim] = DBL_MAX;
+			xmax[idim] = -DBL_MAX;
+		}
+
+		for (size_t i = 0; i < num_points; i++)
+		{
+			for (size_t idim = 0; idim < 3; idim++)
+			{
+				if (points[i][idim] < xmin[idim]) xmin[idim] = points[i][idim];
+				if (points[i][idim] > xmax[idim]) xmax[idim] = points[i][idim];
+			}
+		}
+
+		double* dx = new double[3];
+		for (size_t idim = 0; idim < 3; idim++)
+		{
+			dx[idim] = xmax[idim] - xmin[idim];
+		}
+
+		// place the origin in the lower left corner of the bounding box of the model
+		for (size_t i = 0; i < num_points; i++)
+		{
+			for (size_t idim = 0; idim < 3; idim++) points[i][idim] -= xmin[idim];
+		}
+		delete[] xmin;
+		delete[] xmax;
+		delete[] dx;
+		#pragma endregion
+	}
+
 	weld_nearby_points(num_points, points, num_faces, faces, 1E-8);
 	save_mesh_obj("clean.obj", num_points, points, num_faces, faces);
 
 	vcm_cout << "  * Number of Input mesh points = " << num_points << std::endl;
 	vcm_cout << "  * Number of Input mesh faces = " << num_faces << std::endl;
 
+	
 
 	return 0;
 	#pragma endregion
@@ -303,7 +342,7 @@ int MeshingPolyMesh::save_mesh_obj(std::string file_name, size_t num_points, dou
 	// Points
 	for (size_t i = 0; i < num_points; i++)
 	{
-		file << "v " << points[i][0] << " " << points[i][1] << " " << points[i][2] << std::endl;
+		file << std::setprecision(16) << "v " << points[i][0] << " " << points[i][1] << " " << points[i][2] << std::endl;
 	}
 
 	// faces
@@ -404,7 +443,7 @@ int MeshingPolyMesh::weld_nearby_points(size_t &num_points, double** &points, si
 		#pragma endregion
 	}
 
-	if (true)
+	if (false)
 	{
 		#pragma region Remove redundant faces:
 		size_t iface(0);

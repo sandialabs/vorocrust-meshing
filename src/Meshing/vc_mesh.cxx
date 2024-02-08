@@ -35,7 +35,7 @@
 
 #include <MeshingOptionParser.h>
 #include <MeshingVoroCrust.h>
-
+#include <MeshingPolyMesh.h>
 
 #ifdef USE_KOKKOS
 	#include <Kokkos_Core.hpp>
@@ -47,13 +47,11 @@ class OptionParserVCMesh : public MeshingOptionParser
 {
 public:
 
-
 	OptionParserVCMesh(const int argc, char* argv[])
 	: MeshingOptionParser(argc, argv)
 	{
 		this->parse();
 	}
-
 
 	virtual bool parse_options(void)
 	{
@@ -61,8 +59,17 @@ public:
 		{
 			this->method   = this->method_type_vc();
 			this->filename = this->get_option_value("-vc", true);
+
 			return true;
 		}
+		else if ( this -> option_exists("-subdivision_smooth") ) 
+		{
+			this->method = this->method_type_smooth();
+			this->filename = this->get_option_value("-subdivision_smooth", true);
+
+			return true;
+		}
+
 		return false;
 	}
 
@@ -100,6 +107,8 @@ public:
 	// Method Type Helpers
 	int method_type_vc(void) { return 1; }
 
+	int method_type_smooth(void) { return 2; }
+
 };    // class OptionParserVCMesh
 
 
@@ -121,6 +130,23 @@ int main(int argc, char* argv[])
 			MeshingVoroCrust vc(options.get_filename());
 			vc.execute();
 		}
+		//if ( options.get_method() == options.method_type_smooth() ) {
+		//	vcm_cout << "Triggered path" << std::endl;
+		//	MeshingPolyMesh mpm;
+		//	mpm.read_input_obj_file(options.filename, 85);
+		//	mpm.smooth_model_via_loop_subdivision(1, true);
+		//	mpm.save_mesh_obj("/home/rtpric/data/smoothing/out_1pass.obj");
+		//	vcm_cout << "First pass done..." << std::endl;
+		//	mpm.smooth_model_via_loop_subdivision(1, true);
+		//	mpm.save_mesh_obj("/home/rtpric/data/smoothing/out_2pass.obj");
+		//	vcm_cout << "Second pass done..." << std::endl;
+		//	mpm.smooth_model_via_loop_subdivision(1, true);
+		//	mpm.save_mesh_obj("/home/rtpric/data/smoothing/out_3pass.obj");
+		//	vcm_cout << "Third pass done..." << std::endl;
+		//	mpm.smooth_model_via_loop_subdivision(1, true);
+		//	mpm.save_mesh_obj("/home/rtpric/data/smoothing/out_4pass.obj");
+		//	vcm_cout << "Fourth pass done..." << std::endl;
+		//}
 
 	#ifdef USE_KOKKOS
 	}

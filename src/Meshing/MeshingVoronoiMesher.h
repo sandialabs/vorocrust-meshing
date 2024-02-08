@@ -116,6 +116,9 @@ private:
 		                       double* x, size_t& closest_tree_point, double& closest_distance);
 
 	int get_closest_tree_point(size_t num_points, size_t num_dim, double* points, size_t tree_origin, size_t* tree_right, size_t* tree_left,
+		                       double* x, double* e_dir, size_t& closest_tree_point, double& closest_distance);
+
+	int get_closest_tree_point(size_t num_points, size_t num_dim, double* points, size_t tree_origin, size_t* tree_right, size_t* tree_left,
 		                       size_t tree_point_index, double* e_dir, size_t& closest_tree_point, double& closest_distance);
 
 
@@ -137,6 +140,12 @@ private:
 	int kd_tree_get_closest_seed(size_t num_points, size_t num_dim, double* points,
 		                         size_t tree_origin, size_t* tree_right, size_t* tree_left,
 		                         double* x, size_t d_index, size_t node_index,
+		                         size_t& closest_seed, double& closest_distance,
+		                         size_t& num_nodes_visited);
+
+	int kd_tree_get_closest_seed(size_t num_points, size_t num_dim, double* points,
+		                         size_t tree_origin, size_t* tree_right, size_t* tree_left,
+		                         double* x, double* e_dir, size_t d_index, size_t node_index,
 		                         size_t& closest_seed, double& closest_distance,
 		                         size_t& num_nodes_visited);
 
