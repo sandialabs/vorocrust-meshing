@@ -97,6 +97,15 @@ if(VOROCRUST_BUILD_MESH)
     set_tests_properties("Torus" PROPERTIES TIMEOUT 3600) #3600
 
     #-----------
+    # Cylinder with sharp edges but no sharp corners
+    #-----------
+    # Regression test: the corner-sphere kd-tree is empty, and searching it used to segfault
+    # in generate_edge_spheres. The test passes when vc_mesh exits normally.
+    set(testCylinderNoCornersFiles cyl.obj)
+    vorocrust_add_simple_test("Cylinder_No_Corners" ${VOROCRUST_APPNAME_VCMESH} "Cylinder_No_Corners" "vc.in" "${testCylinderNoCornersFiles}")
+    set_tests_properties("Cylinder_No_Corners" PROPERTIES TIMEOUT 600)
+
+    #-----------
     # Monitoring Points (combined running w/ imposing pts and python script)
     #-----------
     set(OneBoxMPFiles OneBox.obj monitoring_points.csv check_points_in_mesh.py run_series.sh)

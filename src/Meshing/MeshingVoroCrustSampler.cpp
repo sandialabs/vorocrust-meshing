@@ -1227,9 +1227,14 @@ int MeshingVoroCrustSampler::generate_edge_spheres(size_t num_points, double** p
 				edge_point_cloud->get_closest_non_smooth_tree_edge_point(new_sphere, feature_TOL, smooth_angle_threshold, iclosest, hclosest);
 				double edge_sz = alpha_sz * hclosest;
 
-				hclosest = DBL_MAX;
-				corner_spheres->get_closest_non_smooth_tree_edge_point(new_sphere, feature_TOL, smooth_angle_threshold, iclosest, hclosest);
-				edge_sz = fmin(edge_sz, alpha_sz * hclosest);
+				// A model with no sharp corners leaves corner_spheres empty; searching an
+				// empty kd-tree reads _points[0] out of bounds (segfault).
+				if (corner_spheres->get_num_tree_points() > 0)
+				{
+					hclosest = DBL_MAX;
+					corner_spheres->get_closest_non_smooth_tree_edge_point(new_sphere, feature_TOL, smooth_angle_threshold, iclosest, hclosest);
+					edge_sz = fmin(edge_sz, alpha_sz * hclosest);
+				}
 
 				if (num_samples > 1)
 				{
